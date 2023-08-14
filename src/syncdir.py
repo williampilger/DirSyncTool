@@ -1,20 +1,31 @@
-# Agradecimentos: ChatGPT-3.5
+# Agradecimentos ao ChatGPT-3.5, que escreveu a maior parte do código.
 
 import os
 import shutil
 import configparser
+import fnmatch
+
+def should_ignore_file(file_name, ignore_patterns):
+    for pattern in ignore_patterns:
+        if fnmatch.fnmatch(file_name, pattern):
+            return True
+    return False
 
 def are_files_equal(file1, file2):
     return os.path.exists(file2) and os.path.getsize(file1) == os.path.getsize(file2) and os.path.getmtime(file1) == os.path.getmtime(file2)
 
-def sync_folders(source, destination):
+def sync_folders(source, destination, ignore_patterns):
     for item in os.listdir(source):
+        
+        if should_ignore_file(item, ignore_patterns):
+            continue
+
         source_item = os.path.join(source, item)
         dest_item = os.path.join(destination, item)
 
         if os.path.isdir(source_item):
             if os.path.exists(dest_item):
-                sync_folders(source_item, dest_item)
+                sync_folders(source_item, dest_item, ignore_patterns)
             else:
                 print(f"copytree: {source_item}")
                 shutil.copytree(source_item, dest_item)
@@ -40,12 +51,14 @@ def main():
     config.read('sync_config.ini')
 
     for section in config.sections():
+
         source_folder = config.get(section, 'source')
         dest_folder = config.get(section, 'destination')
+        ignore_patterns = config.get(section, 'ignore_patterns', fallback='').split(',')
 
         if os.path.exists(source_folder) and os.path.exists(dest_folder):
             print(f"Synchronizing {source_folder} -> {dest_folder}")
-            sync_folders(source_folder, dest_folder)
+            sync_folders(source_folder, dest_folder, ignore_patterns)
             print("Synchronization complete")
         else:
             print(f"Source or destination folder does not exist for {section}. Skipping...")
