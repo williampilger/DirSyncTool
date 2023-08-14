@@ -4,6 +4,9 @@ import os
 import shutil
 import configparser
 
+def are_files_equal(file1, file2):
+    return os.path.exists(file2) and os.path.getsize(file1) == os.path.getsize(file2) and os.path.getmtime(file1) == os.path.getmtime(file2)
+
 def sync_folders(source, destination):
     for item in os.listdir(source):
         source_item = os.path.join(source, item)
@@ -16,7 +19,7 @@ def sync_folders(source, destination):
                 print(f"copytree: {source_item}")
                 shutil.copytree(source_item, dest_item)
         else:
-            if not os.path.exists(dest_item) or os.path.getmtime(source_item) > os.path.getmtime(dest_item):
+            if not are_files_equal(source_item, dest_item):
                 print(f"copy2: {source_item}")
                 shutil.copy2(source_item, dest_item)
 
