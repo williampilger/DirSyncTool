@@ -29,11 +29,11 @@ def sync_folders(source, destination, ignore_patterns):
                 if os.path.exists(dest_item):
                     sync_folders(source_item, dest_item, ignore_patterns)
                 else:
-                    print(f"copytree: {source_item}")
+                    print(f"    copytree: {source_item}")
                     shutil.copytree(source_item, dest_item)
             else:
                 if not are_files_equal(source_item, dest_item):
-                    print(f"copy2: {source_item}")
+                    print(f"    copy2: {source_item}")
                     shutil.copy2(source_item, dest_item)
 
         for item in os.listdir(destination):
@@ -42,15 +42,15 @@ def sync_folders(source, destination, ignore_patterns):
 
             if not os.path.exists(source_item):
                 if os.path.isdir(dest_item):
-                    print(f"rmtree: {dest_item}")
+                    print(f"    rmtree: {dest_item}")
                     shutil.rmtree(dest_item)
                 else:
-                    print(f"remove: {dest_item}")
+                    print(f"    remove: {dest_item}")
                     os.remove(dest_item)
         return True
     except Exception as e:
-        print(f"Sync({source}->{destination}) = Error: {e}")
-        registra_log_geral(f"Erro: {e}")
+        print(f"  Sync({source}->{destination}) = Error: {e}")
+        registra_log_geral(f"  Erro: {e}")
     return False
 
 def registra_log_geral(texto):
@@ -71,16 +71,18 @@ def main():
 
         source_folder = config.get(section, 'source')
         dest_folder = config.get(section, 'destination')
-        ignore_patterns = config.get(section, 'ignore_patterns', fallback='').split(',')
+        ignore_patterns = [ pattern.strip() for pattern in config.get(section, 'ignore_patterns', fallback='').split(',')]
 
         if os.path.exists(source_folder) and os.path.exists(dest_folder):
-            registra_log_geral(f"Synchronizing {source_folder} -> {dest_folder}")
+            registra_log_geral(f"  Synchronizing {source_folder} -> {dest_folder}")
             if sync_folders(source_folder, dest_folder, ignore_patterns):
-                registra_log_geral("Synchronization complete")
+                registra_log_geral("  Synchronization complete")
             else:
-                registra_log_geral("Synchronization failed")
+                registra_log_geral("  Synchronization failed")
         else:
-            registra_log_geral(f"Source or destination folder does not exist for {section}. Skipping...")
+            registra_log_geral(f"  Source or destination folder does not exist for {section}. Skipping...")
 
 if __name__ == "__main__":
+    registra_log_geral("Starting main synchronization")
     main()
+    registra_log_geral("Main synchronization complete")
