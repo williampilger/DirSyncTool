@@ -6,20 +6,112 @@ import configparser
 import fnmatch
 from datetime import datetime
 
-def should_ignore_file(file_name, ignore_patterns):
-    for pattern in ignore_patterns:
-        if fnmatch.fnmatch(file_name, pattern):
+LOG_FILE = "log_geral.txt"
+
+def somar_dicionarios(dict1, dict2):
+    resultado = {}
+    for chave in dict1:
+        if isinstance(dict1[chave], int):
+            resultado[chave] = dict1[chave] + dict2[chave]
+        elif isinstance(dict1[chave], dict):
+            resultado[chave] = somar_dicionarios(dict1[chave], dict2[chave])
+    return resultado
+
+class FilesHandler:
+    
+    counter_control = {'ignored':0, 'cp': 0, 'rm': 0, 'cptree':0,'rmtree': 0,'errors':{'cp': 0, 'rm': 0, 'cptree':0, 'rmtree': 0, 'other': 0} }
+
+    def __init__(self, ignore_patterns = []):
+        self.ignore_patterns = ignore_patterns
+
+    def update_ignore_patterns(self, ignore_patterns):
+        self.ignore_patterns = ignore_patterns
+    
+    def should_ignore_file(self, file_name):
+        for pattern in self.ignore_patterns:
+            if fnmatch.fnmatch(file_name, pattern):
+                self.counter_control['ignored'] += 1
+                return True
+        return False
+    
+    def are_files_equal(self, file1, file2):
+        return os.path.exists(file2) and os.path.getsize(file1) == os.path.getsize(file2) and int(os.path.getmtime(file1)) == int(os.path.getmtime(file2))
+
+    def copytree(sefl, source, destination):
+        try:
+            shutil.copytree(source, destination)
+            print(f"    copytree: {source} -> {destination}")
+            self.counter_control['cptree'] += 1
             return True
-    return False
+        except Exception as e:
+            self.counter_control['errors']['cptree'] += 1
+            registra_log_geral(f"    copytree: {source} -> {destination} = Error: {e}")
+        return False
+    
+    def copy2(self, source, destination):
+        try:
+            shutil.copy2(source, destination)
+            print(f"    copy2: {source} -> {destination}")
+            self.counter_control['cp'] += 1
+            return True
+        except Exception as e:
+            self.counter_control['errors']['cp'] += 1
+            registra_log_geral(f"    copy2: {source} -> {destination} = Error: {e}")
+        return False
+    
+    def rmtree(self, path):
+        try:
+            shutil.rmtree(path)
+            print(f"    rmtree: {path}")
+            self.counter_control['rmtree'] += 1
+            return True
+        except Exception as e:
+            self.counter_control['errors']['rmtree'] += 1
+            registra_log_geral(f"    rmtree: {path} = Error: {e}")
+        return False
 
-def are_files_equal(file1, file2):
-    return os.path.exists(file2) and os.path.getsize(file1) == os.path.getsize(file2) and int(os.path.getmtime(file1)) == int(os.path.getmtime(file2))
+    def remove(self, path):
+        try:
+            os.remove(path)
+            print(f"    remove: {path}")
+            self.counter_control['rm'] += 1
+            return True
+        except Exception as e:
+            self.counter_control['errors']['rm'] += 1
+            registra_log_geral(f"    remove: {path} = Error: {e}")
+        return False
 
-def sync_folders(source, destination, ignore_patterns):
+    def get_counter_control(self):
+        return self.counter_control
+    
+    def print_counter_control(self):
+        print(f"    {self.counter_control}")
+        try:
+            with open(LOG_FILE, "a") as arquivo:
+                arquivo.writelines(f'\n*********************************************************************\n RELATORIO DE SINCRONIZACAO')
+                arquivo.writelines(f"\n Arquivos Copiados:  {self.counter_control['cp']}")
+                arquivo.writelines(f"\n Pastas Copiados:    {self.counter_control['cptree']}")
+                arquivo.writelines(f"\n Arquivos Removidos: {self.counter_control['rm']}")
+                arquivo.writelines(f"\n Pastas Removidas:   {self.counter_control['rmtree']}")
+                arquivo.writelines(f"\n Ignorados:          {self.counter_control['ignored']}")
+                arquivo.writelines(f"\n ERROS:")
+                arquivo.writelines(f"\n   Cópia de Arquivo:   {self.counter_control['errors']['cp']}")
+                arquivo.writelines(f"\n   Cópia de Pasta:     {self.counter_control['errors']['cptree']}")
+                arquivo.writelines(f"\n   Remoção de Arquivo: {self.counter_control['errors']['rm']}")
+                arquivo.writelines(f"\n   Remoção de Pasta:   {self.counter_control['errors']['rmtree']}")
+                arquivo.writelines(f"\n   Outros erros:       {self.counter_control['errors']['other']}")
+                arquivo.writelines(f'\n*********************************************************************\n')
+        except:
+            pass
+        return
+
+
+def sync_folders(fh, source, destination):
+
     try:
         for item in os.listdir(source):
             
-            if should_ignore_file(item, ignore_patterns):
+            if fh.should_ignore_file(item):
                 continue
 
             source_item = os.path.join(source, item)
@@ -27,14 +119,12 @@ def sync_folders(source, destination, ignore_patterns):
 
             if os.path.isdir(source_item):
                 if os.path.exists(dest_item):
-                    sync_folders(source_item, dest_item, ignore_patterns)
+                    sync_folders(fh, source_item, dest_item)
                 else:
-                    print(f"    copytree: {source_item}")
-                    shutil.copytree(source_item, dest_item)
+                    fh.copytree(source_item, dest_item)
             else:
-                if not are_files_equal(source_item, dest_item):
-                    print(f"    copy2: {source_item}")
-                    shutil.copy2(source_item, dest_item)
+                if not fh.are_files_equal(source_item, dest_item):
+                    fh.copy2(source_item, dest_item)
 
         for item in os.listdir(destination):
             source_item = os.path.join(source, item)
@@ -42,11 +132,9 @@ def sync_folders(source, destination, ignore_patterns):
 
             if not os.path.exists(source_item):
                 if os.path.isdir(dest_item):
-                    print(f"    rmtree: {dest_item}")
-                    shutil.rmtree(dest_item)
+                    fh.rmtree(dest_item)
                 else:
-                    print(f"    remove: {dest_item}")
-                    os.remove(dest_item)
+                    fh.remove(dest_item)
         return True
     except Exception as e:
         print(f"  Sync({source}->{destination}) = Error: {e}")
@@ -57,7 +145,7 @@ def registra_log_geral(texto):
     instante = datetime.now().strftime('%d/%m/%Y\t%H:%M:%S')
     print(f"{instante}\t{texto}")
     try:
-        with open("log_geral.txt", "a") as arquivo:
+        with open(LOG_FILE, "a") as arquivo:
             arquivo.writelines(f"\n{instante}\t{texto}")
     except:
         pass
@@ -65,22 +153,22 @@ def registra_log_geral(texto):
 
 def main():
     config = configparser.ConfigParser()
+    fh = fh = FilesHandler()
     config.read('sync_config.ini')
-
     for section in config.sections():
-
         source_folder = config.get(section, 'source')
         dest_folder = config.get(section, 'destination')
-        ignore_patterns = [ pattern.strip() for pattern in config.get(section, 'ignore_patterns', fallback='').split(',')]
+        fh.update_ignore_patterns( [ pattern.strip() for pattern in config.get(section, 'ignore_patterns', fallback='').split(',')] )
 
         if os.path.exists(source_folder) and os.path.exists(dest_folder):
             registra_log_geral(f"  Synchronizing {source_folder} -> {dest_folder}")
-            if sync_folders(source_folder, dest_folder, ignore_patterns):
+            if sync_folders(fh, source_folder, dest_folder):
                 registra_log_geral("  Synchronization complete")
             else:
                 registra_log_geral("  Synchronization failed")
         else:
             registra_log_geral(f"  Source or destination folder does not exist for {section}. Skipping...")
+    fh.print_counter_control()
 
 if __name__ == "__main__":
     registra_log_geral("Starting main synchronization")
