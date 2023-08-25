@@ -16,7 +16,7 @@ Funciona perfeitamente para enviar pastas locais para o Google Drive e vice-vers
 
 Juntamente com o executável (seja o binário ou o script python) é obrigatória a criação do arquivo de configuração conforme o modelo abaixo:
 
-*sunc_config.ini*
+*sync_config.ini*
 ```ini
 [Pair1]
 source: path\to\source\folder1
