@@ -41,6 +41,29 @@ Para fazer isso no Windows Server:
 
 ## Sobre
 
-*Agradecimentos especiais ao ChatGPT, que fez isso praticamente sozinho. kkkk*
+### Histórico de modificações
+*As primeiras versões não foram salvas nem catalogadas adequadamente, portanto, esta relação, antes da versão 1.0, pode não estar exatamente correta.*
+```txt
+V0.0
+- Sincronização de pastas. Copiando sempre todos os itens novamente.
+
+V0.1
+- Arquivos e diretórios já existentes não são copiados novamente
+- Correção e tratamento de exceções
+
+V0.2
+- MUDANÇA DE COMO AS CONFIGURAÇÕES SÃO SALVAS
+- Lista de arquivos ignorados
+
+V0.3
+- Correção na lista de arquivos ignorados
+- Criação do LOG das operações
+
+V1.0
+- Implementação do resumo ao final da operação, com contagem de arquivos com sucesso e falha
+- LOGs: Melhoria no detalhamento de operações que falharam
+```
+
+*Agradecimentos especiais ao ChatGPT, que fez a versão 0.0 praticamente sozinho. kkkk*
 
 By: **will.i.am**
