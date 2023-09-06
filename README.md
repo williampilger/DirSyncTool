@@ -9,7 +9,7 @@ Funciona perfeitamente para enviar pastas locais para o Google Drive e vice-vers
 
 ## Download do binary
 
-- [Latest - Windows Server 2008](dist/syncdir.exe);
+- [Latest - Windows Server 2008](dist/x64-winserver2008/syncdir.exe);
 - [Ver todas as versões e builds](dist);
 
 
