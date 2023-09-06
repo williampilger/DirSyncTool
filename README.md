@@ -62,6 +62,11 @@ V0.3
 V1.0
 - Implementação do resumo ao final da operação, com contagem de arquivos com sucesso e falha
 - LOGs: Melhoria no detalhamento de operações que falharam
+
+V1.1
+- Correção do nome da variável 'self' em certos pontos
+- LOG: Correção do espaço de fim de Sync, que estava acontecendo na linha errada
+- Identificação da versão em código
 ```
 
 *Agradecimentos especiais ao ChatGPT, que fez a versão 0.0 praticamente sozinho. kkkk*

@@ -37,7 +37,7 @@ class FilesHandler:
     def are_files_equal(self, file1, file2):
         return os.path.exists(file2) and os.path.getsize(file1) == os.path.getsize(file2) and int(os.path.getmtime(file1)) == int(os.path.getmtime(file2))
 
-    def copytree(sefl, source, destination):
+    def copytree(self, source, destination):
         try:
             shutil.copytree(source, destination)
             print(f"    copytree: {source} -> {destination}")
@@ -83,7 +83,7 @@ class FilesHandler:
 
     def get_counter_control(self):
         return self.counter_control
-    
+
     def print_counter_control(self):
         print(f"    {self.counter_control}")
         try:
@@ -100,7 +100,7 @@ class FilesHandler:
                 arquivo.writelines(f"\n   Remoção de Arquivo: {self.counter_control['errors']['rm']}")
                 arquivo.writelines(f"\n   Remoção de Pasta:   {self.counter_control['errors']['rmtree']}")
                 arquivo.writelines(f"\n   Outros erros:       {self.counter_control['errors']['other']}")
-                arquivo.writelines(f'\n*********************************************************************\n')
+                arquivo.writelines(f'\n*********************************************************************')
         except:
             pass
         return
@@ -171,6 +171,6 @@ def main():
     fh.print_counter_control()
 
 if __name__ == "__main__":
-    registra_log_geral("Starting main synchronization")
+    registra_log_geral("Starting main synchronization (Version 1.1)")
     main()
-    registra_log_geral("Main synchronization complete")
+    registra_log_geral("Main synchronization complete\n\n")
