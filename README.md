@@ -12,6 +12,9 @@ Funciona perfeitamente para enviar pastas locais para o Google Drive e vice-vers
 - [Latest - Windows Server 2008](dist/x64-winserver2008/syncdir.exe);
 - [Ver todas as versões e builds](dist);
 
+## Pré-requisitos
+
+Para que funcione o modo compactação, 
 
 ## Utilização
 
@@ -22,10 +25,20 @@ Juntamente com o executável (seja o binário ou o script python) é obrigatóri
 [Pair1]
 source: path\to\source\folder1
 destination: path\to\destination\folder1
+ignore_patterns: desktop.ini, .DS_Store, thumbs.db
+mode: normal#não informado é a mesma coisa que isso
 
 [Pair2]
 source: path\to\source\folder2
 destination: path\to\destination\folder2
+ignore_patterns: desktop.ini, .DS_Store, thumbs.db
+mode: compress # to compress the folder to a .zip file
+
+[Pair3]
+source: path\to\source\folder2
+destination: path\to\destination\folder2
+ignore_patterns: desktop.ini, .DS_Store, thumbs.db
+mode: compress_1g # to compress the folder to multiple .zip files. The number after '_' means the files parts size
 
 # Adicione mais pares de pastas conforme necessário
 ```
@@ -68,6 +81,10 @@ V1.1
 - Correção do nome da variável 'self' em certos pontos
 - LOG: Correção do espaço de fim de Sync, que estava acontecendo na linha errada
 - Identificação da versão em código
+
+V2.0
+- Implementação de modos de operação
+- Possibilidade de compactar diretórios inteiros
 ```
 
 *Agradecimentos especiais ao ChatGPT, que fez a versão 0.0 praticamente sozinho. kkkk*

@@ -1,9 +1,8 @@
-# Agradecimentos ao ChatGPT-3.5, que escreveu a maior parte do código.
-
 import os
 import shutil
 import configparser
 import fnmatch
+import subprocess
 from datetime import datetime
 
 LOG_FILE = "log_geral.txt"
@@ -19,7 +18,7 @@ def somar_dicionarios(dict1, dict2):
 
 class FilesHandler:
     
-    counter_control = {'ignored':0, 'cp': 0, 'rm': 0, 'cptree':0,'rmtree': 0,'errors':{'cp': 0, 'rm': 0, 'cptree':0, 'rmtree': 0, 'other': 0} }
+    counter_control = {'ignored':0, 'cp': 0, 'compress':0, 'rm': 0, 'cptree':0,'rmtree': 0,'errors':{'cp': 0, 'rm': 0, 'cptree':0, 'rmtree': 0, 'other': 0} }
 
     def __init__(self, ignore_patterns = []):
         self.ignore_patterns = ignore_patterns
@@ -80,6 +79,62 @@ class FilesHandler:
             self.counter_control['errors']['rm'] += 1
             registra_log_geral(f"    remove: {path} = Error: {e}")
         return False
+    
+    def sync_folders(self, source, destination ):
+        try:
+            for item in os.listdir(source):
+                
+                if self.should_ignore_file(item):
+                    continue
+
+                source_item = os.path.join(source, item)
+                dest_item = os.path.join(destination, item)
+
+                if os.path.isdir(source_item):
+                    if os.path.exists(dest_item):
+                        self.sync_folders( source_item, dest_item)
+                    else:
+                        self.copytree(source_item, dest_item)
+                else:
+                    if not self.are_files_equal(source_item, dest_item):
+                        self.copy2(source_item, dest_item)
+
+            for item in os.listdir(destination):
+                source_item = os.path.join(source, item)
+                dest_item = os.path.join(destination, item)
+
+                if not os.path.exists(source_item):
+                    if os.path.isdir(dest_item):
+                        self.rmtree(dest_item)
+                    else:
+                        self.remove(dest_item)
+            return True
+        except Exception as e:
+            self.counter_control['errors']['other'] += 1
+            print(f"  Sync({source}->{destination}) = Error: {e}")
+            registra_log_geral(f"  Erro: {e}")
+        return False
+    
+    def compact_folder( self, source, destination, size='' ):
+        try:
+            ignore = ''
+            for ign in self.ignore_patterns:
+                if ignore != '':
+                    ignore += ' '
+                ignore += '-xr!' + ign
+            
+            if( size != ''):
+                size = '-v' + size
+
+            print(f'7z a {ignore} {size} "{destination}" "{source}"')
+            os.system( f'7z a {ignore} {size} "{destination}" "{source}"' )
+            self.counter_control['compress'] += 1
+            return True
+        except Exception as e:
+            self.counter_control['errors']['other'] += 1
+            print(f"  Compact({source}->{destination}) = Error: {e}")
+            registra_log_geral(f"  Erro: {e}")
+        return False
 
     def get_counter_control(self):
         return self.counter_control
@@ -90,6 +145,7 @@ class FilesHandler:
             with open(LOG_FILE, "a") as arquivo:
                 arquivo.writelines(f'\n*********************************************************************\n RELATORIO DE SINCRONIZACAO')
                 arquivo.writelines(f"\n Arquivos Copiados:  {self.counter_control['cp']}")
+                arquivo.writelines(f"\n Compressões:        {self.counter_control['compress']}")
                 arquivo.writelines(f"\n Pastas Copiados:    {self.counter_control['cptree']}")
                 arquivo.writelines(f"\n Arquivos Removidos: {self.counter_control['rm']}")
                 arquivo.writelines(f"\n Pastas Removidas:   {self.counter_control['rmtree']}")
@@ -105,41 +161,6 @@ class FilesHandler:
             pass
         return
 
-
-def sync_folders(fh, source, destination):
-
-    try:
-        for item in os.listdir(source):
-            
-            if fh.should_ignore_file(item):
-                continue
-
-            source_item = os.path.join(source, item)
-            dest_item = os.path.join(destination, item)
-
-            if os.path.isdir(source_item):
-                if os.path.exists(dest_item):
-                    sync_folders(fh, source_item, dest_item)
-                else:
-                    fh.copytree(source_item, dest_item)
-            else:
-                if not fh.are_files_equal(source_item, dest_item):
-                    fh.copy2(source_item, dest_item)
-
-        for item in os.listdir(destination):
-            source_item = os.path.join(source, item)
-            dest_item = os.path.join(destination, item)
-
-            if not os.path.exists(source_item):
-                if os.path.isdir(dest_item):
-                    fh.rmtree(dest_item)
-                else:
-                    fh.remove(dest_item)
-        return True
-    except Exception as e:
-        print(f"  Sync({source}->{destination}) = Error: {e}")
-        registra_log_geral(f"  Erro: {e}")
-    return False
 
 def registra_log_geral(texto):
     instante = datetime.now().strftime('%d/%m/%Y\t%H:%M:%S')
@@ -158,19 +179,33 @@ def main():
     for section in config.sections():
         source_folder = config.get(section, 'source')
         dest_folder = config.get(section, 'destination')
+        mode = config.get(section, 'mode', fallback='normal')
         fh.update_ignore_patterns( [ pattern.strip() for pattern in config.get(section, 'ignore_patterns', fallback='').split(',')] )
 
-        if os.path.exists(source_folder) and os.path.exists(dest_folder):
-            registra_log_geral(f"  Synchronizing {source_folder} -> {dest_folder}")
-            if sync_folders(fh, source_folder, dest_folder):
-                registra_log_geral("  Synchronization complete")
+        if mode == 'normal':
+            if os.path.exists(source_folder) and os.path.exists(dest_folder):
+                registra_log_geral(f"  Synchronizing {source_folder} -> {dest_folder}")
+                if fh.sync_folders(source_folder, dest_folder):
+                    registra_log_geral("  Synchronization complete")
+                else:
+                    registra_log_geral("  Synchronization failed")
             else:
-                registra_log_geral("  Synchronization failed")
+                registra_log_geral(f"  Source or destination folder does not exist for {section}. Skipping...")
+        elif mode.startswith('compress'):
+            md = mode.split('_')
+            size = ''
+            if len(md) > 1:
+                size = md[1]
+            registra_log_geral(f"  Compressing {source_folder} -> {dest_folder}")
+            if fh.compact_folder(source_folder, dest_folder, size):
+                registra_log_geral("  Compression complete")
+            else:
+                registra_log_geral("  Compression failed")
         else:
-            registra_log_geral(f"  Source or destination folder does not exist for {section}. Skipping...")
+            registra_log_geral("  Invalid mode informed")
     fh.print_counter_control()
 
 if __name__ == "__main__":
-    registra_log_geral("Starting main synchronization (Version 1.1)")
+    registra_log_geral("Starting main synchronization (Version 2.0)")
     main()
     registra_log_geral("Main synchronization complete\n\n")
